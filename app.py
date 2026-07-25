@@ -1,123 +1,23 @@
-# ============================================================
-# ULTIMATE AI DASHBOARD – PERMANENT GITHUB STORAGE
-# SCHOLARSHIP & JOB TRACKER
-# ============================================================
 import streamlit as st
 import pandas as pd
 import requests
 import base64
 import io
-import re
-import json
-import time
 from datetime import datetime, timedelta
-import os
 import altair as alt
 from bs4 import BeautifulSoup
 import openpyxl
 
-# ---------- PAGE CONFIG ----------
-st.set_page_config(
-    layout="wide", 
-    page_title="🎓 AI Scholarship Dashboard", 
-    page_icon="🎓",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(layout="wide", page_title="🎓 Scholarship Dashboard", page_icon="🎓")
 
-# ---------- CUSTOM CSS THEME ----------
 st.markdown("""
 <style>
-    .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        color: #1a1a2e;
-    }
-    .css-1y4p8pa, .element-container, .stMarkdown {
-        background: rgba(255,255,255,0.7) !important;
-        backdrop-filter: blur(10px);
-        border-radius: 20px !important;
-        padding: 20px !important;
-        border: 1px solid rgba(255,255,255,0.3) !important;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1) !important;
-    }
-    .stButton button {
-        background: linear-gradient(145deg, #FFD700, #B8860B) !important;
-        color: #1a1a2e !important;
-        border-radius: 50px !important;
-        border: none !important;
-        font-weight: bold !important;
-        padding: 12px 28px !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(184, 134, 11, 0.3) !important;
-    }
-    .stButton button:hover {
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 6px 25px rgba(184, 134, 11, 0.5) !important;
-    }
-    h1, h2, h3 {
-        color: #1a1a2e !important;
-        font-weight: 700 !important;
-    }
-    .metric-card {
-        background: rgba(255,255,255,0.8) !important;
-        border-radius: 15px !important;
-        padding: 15px !important;
-        border-left: 4px solid #B8860B !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
-    }
-    .dataframe {
-        border-radius: 15px !important;
-        overflow: hidden !important;
-        background: rgba(255,255,255,0.8) !important;
-    }
-    .dataframe th {
-        background: linear-gradient(145deg, #B8860B, #FFD700) !important;
-        color: white !important;
-        padding: 12px !important;
-    }
-    .dataframe td {
-        padding: 10px !important;
-        color: #1a1a2e !important;
-    }
-    .stAlert {
-        background: rgba(184, 134, 11, 0.1) !important;
-        border-left: 4px solid #B8860B !important;
-        border-radius: 10px !important;
-    }
-    .status-applied {
-        background: #28a745 !important;
-        color: white !important;
-        padding: 4px 12px !important;
-        border-radius: 20px !important;
-        font-size: 12px !important;
-        font-weight: bold !important;
-    }
-    .status-pending {
-        background: #ffc107 !important;
-        color: black !important;
-        padding: 4px 12px !important;
-        border-radius: 20px !important;
-        font-size: 12px !important;
-        font-weight: bold !important;
-    }
-    .status-archived {
-        background: #6c757d !important;
-        color: white !important;
-        padding: 4px 12px !important;
-        border-radius: 20px !important;
-        font-size: 12px !important;
-        font-weight: bold !important;
-    }
-    .css-1d391kg {
-        background: rgba(255,255,255,0.4) !important;
-        backdrop-filter: blur(10px) !important;
-    }
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #f0f0f0; }
-    ::-webkit-scrollbar-thumb { background: linear-gradient(145deg, #B8860B, #FFD700); border-radius: 4px; }
+    .stApp { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+    .stButton button { background: linear-gradient(145deg, #FFD700, #B8860B) !important; color: #1a1a2e !important; border-radius: 50px !important; font-weight: bold !important; }
+    h1, h2, h3 { color: #1a1a2e !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- GITHUB CONFIGURATION ----------
 def get_github_config():
     return {
         "token": st.secrets["github"]["token"],
@@ -127,30 +27,21 @@ def get_github_config():
         "branch": "main"
     }
 
-# ---------- GITHUB STORAGE FUNCTIONS ----------
 def load_data_from_github():
     try:
         config = get_github_config()
         url = f"https://api.github.com/repos/{config['username']}/{config['repo']}/contents/{config['file_path']}"
         headers = {"Authorization": f"token {config['token']}"}
         response = requests.get(url, headers=headers)
-        
         if response.status_code == 200:
             data = response.json()
             content = base64.b64decode(data["content"])
             df = pd.read_excel(io.BytesIO(content))
             return df, data["sha"]
-        elif response.status_code == 404:
-            df = pd.DataFrame(columns=[
-                "Id", "Title", "Organization", "Category", "Deadline", 
-                "Status", "Link", "Description", "Country", "CreatedAt"
-            ])
-            return df, None
         else:
-            st.error(f"❌ Failed to load data: {response.status_code}")
-            return pd.DataFrame(), None
-    except Exception as e:
-        st.error(f"❌ Error loading data: {str(e)}")
+            df = pd.DataFrame(columns=["Id", "Title", "Organization", "Category", "Deadline", "Status", "Link", "Description", "Country", "CreatedAt"])
+            return df, None
+    except:
         return pd.DataFrame(), None
 
 def save_data_to_github(df, sha):
@@ -159,115 +50,44 @@ def save_data_to_github(df, sha):
         content = io.BytesIO()
         df.to_excel(content, index=False, engine='openpyxl')
         encoded = base64.b64encode(content.getvalue()).decode()
-        
         url = f"https://api.github.com/repos/{config['username']}/{config['repo']}/contents/{config['file_path']}"
         headers = {"Authorization": f"token {config['token']}"}
-        payload = {
-            "message": f"Update opportunities - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "content": encoded,
-            "branch": config['branch']
-        }
+        payload = {"message": f"Update - {datetime.now()}", "content": encoded, "branch": config['branch']}
         if sha:
             payload["sha"] = sha
-        
         response = requests.put(url, headers=headers, json=payload)
         if response.status_code in [200, 201]:
-            new_data = response.json()
-            new_sha = new_data.get('content', {}).get('sha', sha)
-            return True, new_sha
-        else:
-            st.error(f"❌ Failed to save: {response.status_code}")
-            return False, sha
-    except Exception as e:
-        st.error(f"❌ Error saving data: {str(e)}")
+            return True, response.json().get('content', {}).get('sha', sha)
+        return False, sha
+    except:
         return False, sha
 
-# ---------- COUNTRY LIST ----------
-COUNTRIES = [
-    "All", "Afghanistan", "Albania", "Algeria", "Angola", "Argentina", "Armenia", "Australia", 
-    "Austria", "Azerbaijan", "Bahrain", "Bangladesh", "Belarus", "Belgium", "Benin", "Bhutan", 
-    "Bolivia", "Bosnia", "Brazil", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon", 
-    "Canada", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", 
-    "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominican Republic", 
-    "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", 
-    "Ethiopia", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", 
-    "Greece", "Guatemala", "Guinea", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", 
-    "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Ivory Coast", 
-    "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kuwait", "Kyrgyzstan", "Laos", 
-    "Latvia", "Lebanon", "Liberia", "Libya", "Lithuania", "Luxembourg", "Madagascar", "Malawi", 
-    "Malaysia", "Maldives", "Mali", "Malta", "Mauritania", "Mauritius", "Mexico", "Moldova", 
-    "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nepal", "Netherlands", 
-    "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", 
-    "Oman", "Pakistan", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", 
-    "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saudi Arabia", "Senegal", "Serbia", 
-    "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Somalia", "South Africa", "South Korea", 
-    "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", 
-    "Tajikistan", "Tanzania", "Thailand", "Togo", "Trinidad", "Tunisia", "Turkey", "Turkmenistan", 
-    "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", 
-    "Uzbekistan", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
-]
+COUNTRIES = ["All", "Ethiopia", "USA", "UK", "Canada", "Australia", "Germany", "France", "India", "China", "Japan", "Brazil", "South Africa", "Kenya", "Nigeria", "Egypt", "Ghana"]
 
-# ---------- INITIALIZE SESSION STATE ----------
-def init_session_state():
-    if "df" not in st.session_state:
-        df, sha = load_data_from_github()
-        st.session_state.df = df if not df.empty else pd.DataFrame(columns=[
-            "Id", "Title", "Organization", "Category", "Deadline", 
-            "Status", "Link", "Description", "Country", "CreatedAt"
-        ])
-        st.session_state.sha = sha
-    
-    if "submitted" not in st.session_state:
-        st.session_state.submitted = False
-    
-    if "selected_country" not in st.session_state:
-        st.session_state.selected_country = "All"
-    
-    if "notification_count" not in st.session_state:
-        st.session_state.notification_count = 0
-    
-    if "last_search" not in st.session_state:
-        st.session_state.last_search = datetime.now()
+if "df" not in st.session_state:
+    df, sha = load_data_from_github()
+    st.session_state.df = df if not df.empty else pd.DataFrame(columns=["Id", "Title", "Organization", "Category", "Deadline", "Status", "Link", "Description", "Country", "CreatedAt"])
+    st.session_state.sha = sha
 
-init_session_state()
-
-# ---------- CRUD OPERATIONS ----------
 def add_opportunity(data):
     df = st.session_state.df
     new_id = len(df) + 1 if not df.empty else 1
-    
-    new_row = pd.DataFrame([{
-        "Id": new_id,
-        "Title": data["title"],
-        "Organization": data["organization"],
-        "Category": data["category"],
-        "Deadline": data["deadline"],
-        "Status": "Not Applied",
-        "Link": data.get("link", ""),
-        "Description": data.get("description", ""),
-        "Country": data.get("country", "All"),
-        "CreatedAt": datetime.now().strftime("%Y-%m-%d %H:%M")
-    }])
-    
+    new_row = pd.DataFrame([{"Id": new_id, "Title": data["title"], "Organization": data["organization"], "Category": data["category"], "Deadline": data["deadline"], "Status": "Not Applied", "Link": data.get("link", ""), "Description": data.get("description", ""), "Country": data.get("country", "All"), "CreatedAt": datetime.now().strftime("%Y-%m-%d %H:%M")}])
     df = pd.concat([df, new_row], ignore_index=True)
     success, new_sha = save_data_to_github(df, st.session_state.sha)
-    
     if success:
         st.session_state.df = df
         st.session_state.sha = new_sha
-        st.session_state.submitted = True
         return True
     return False
 
 def update_opportunity(opp_id, data):
     df = st.session_state.df
     idx = df[df["Id"] == opp_id].index
-    
     if not idx.empty:
         for key, value in data.items():
             if key in df.columns:
                 df.loc[idx, key] = value
-        
         success, new_sha = save_data_to_github(df, st.session_state.sha)
         if success:
             st.session_state.df = df
@@ -275,10 +95,7 @@ def update_opportunity(opp_id, data):
             return True
     return False
 
-def archive_opportunity(opp_id):
-    return update_opportunity(opp_id, {"Status": "Archived"})
-
-def delete_opportunity_permanent(opp_id):
+def delete_opportunity(opp_id):
     df = st.session_state.df
     df = df[df["Id"] != opp_id]
     success, new_sha = save_data_to_github(df, st.session_state.sha)
@@ -288,323 +105,92 @@ def delete_opportunity_permanent(opp_id):
         return True
     return False
 
-# ---------- FILTER FUNCTIONS ----------
-def filter_by_country(df, country):
-    if country == "All" or country == "":
-        return df
-    return df[df["Country"] == country]
-
-def filter_by_status(df, status):
-    if status == "All" or status == "":
-        return df
-    return df[df["Status"] == status]
-
-def filter_by_deadline(df, days):
-    if days == "All" or days == "":
-        return df
-    
-    today = datetime.today().date()
-    if days == "Today":
-        return df[pd.to_datetime(df["Deadline"]).dt.date == today]
-    elif days == "This Week":
-        week_end = today + timedelta(days=7)
-        return df[(pd.to_datetime(df["Deadline"]).dt.date >= today) & 
-                  (pd.to_datetime(df["Deadline"]).dt.date <= week_end)]
-    elif days == "This Month":
-        month_end = today + timedelta(days=30)
-        return df[(pd.to_datetime(df["Deadline"]).dt.date >= today) & 
-                  (pd.to_datetime(df["Deadline"]).dt.date <= month_end)]
-    return df
-
-def filter_by_search(df, search_term):
-    if not search_term:
-        return df
-    
-    search_lower = search_term.lower()
-    mask = df["Title"].str.lower().str.contains(search_lower, na=False) | \
-           df["Organization"].str.lower().str.contains(search_lower, na=False) | \
-           df["Category"].str.lower().str.contains(search_lower, na=False) | \
-           df["Description"].str.lower().str.contains(search_lower, na=False)
-    return df[mask]
-
-# ---------- UI: SIDEBAR ----------
 with st.sidebar:
     st.markdown("## 🎯 Dashboard")
-    
     df = st.session_state.df
     if not df.empty:
-        total = len(df)
-        applied = len(df[df["Status"] == "Applied"])
-        pending = len(df[df["Status"] == "Not Applied"])
-        archived = len(df[df["Status"] == "Archived"])
-        
-        st.markdown(f"""
-        ### 📊 Quick Stats
-        - **Total:** {total}
-        - **Applied:** {applied} ✅
-        - **Pending:** {pending} ⏳
-        - **Archived:** {archived} 📁
-        """)
-        
-        today = datetime.today().date()
-        urgent = df[pd.to_datetime(df["Deadline"]).dt.date <= today + timedelta(days=3)]
-        if not urgent.empty:
-            st.warning(f"🔴 {len(urgent)} urgent deadlines within 3 days!")
-    else:
-        st.info("No opportunities yet. Add your first one!")
-    
-    st.markdown("---")
-    
-    if st.button("🔔 Check Notifications", use_container_width=True):
-        if not df.empty:
-            urgent_count = len(df[pd.to_datetime(df["Deadline"]).dt.date <= datetime.today().date() + timedelta(days=3)])
-            if urgent_count > 0:
-                st.success(f"🔔 {urgent_count} urgent opportunities need attention!")
-            else:
-                st.success("✅ All deadlines are under control!")
-        else:
-            st.info("No opportunities to check.")
-    
+        st.markdown(f"**Total:** {len(df)}")
+        st.markdown(f"**Applied:** {len(df[df['Status'] == 'Applied'])} ✅")
+        st.markdown(f"**Pending:** {len(df[df['Status'] == 'Not Applied'])} ⏳")
     st.markdown("---")
     st.caption("⚡ Data stored on GitHub")
 
-# ---------- UI: MAIN PAGE ----------
 st.title("🎓 Scholarship & Job Dashboard")
-st.markdown("*Automated tracking and permanent storage*")
 
-# ---------- FILTERS SECTION ----------
-st.markdown("### 🔍 Filters & Search")
-
-col1, col2, col3, col4, col5 = st.columns(5)
-
+col1, col2, col3, col4 = st.columns(4)
 with col1:
-    country_filter = st.selectbox(
-        "🌍 Country",
-        ["All"] + COUNTRIES[1:],
-        index=0,
-        key="country_filter"
-    )
-
+    country_filter = st.selectbox("🌍 Country", COUNTRIES)
 with col2:
-    status_filter = st.selectbox(
-        "📌 Status",
-        ["All", "Not Applied", "Applied", "Archived"],
-        key="status_filter"
-    )
-
+    status_filter = st.selectbox("📌 Status", ["All", "Not Applied", "Applied"])
 with col3:
-    deadline_filter = st.selectbox(
-        "⏰ Deadline",
-        ["All", "Today", "This Week", "This Month"],
-        key="deadline_filter"
-    )
-
+    search_term = st.text_input("🔎 Search")
 with col4:
-    search_term = st.text_input("🔎 Search", placeholder="Type to search...", key="search_input")
-
-with col5:
-    if st.button("🔄 Reset Filters", use_container_width=True):
-        st.session_state.country_filter = "All"
-        st.session_state.status_filter = "All"
-        st.session_state.deadline_filter = "All"
-        st.session_state.search_input = ""
+    if st.button("🔄 Reset"):
         st.rerun()
 
-# ---------- APPLY FILTERS ----------
 df = st.session_state.df.copy()
+if not df.empty:
+    if country_filter != "All":
+        df = df[df["Country"] == country_filter]
+    if status_filter != "All":
+        df = df[df["Status"] == status_filter]
+    if search_term:
+        df = df[df["Title"].str.contains(search_term, case=False, na=False)]
 
 if not df.empty:
-    df = filter_by_country(df, country_filter)
-    df = filter_by_status(df, status_filter)
-    df = filter_by_deadline(df, deadline_filter)
-    df = filter_by_search(df, search_term)
+    st.dataframe(df[["Id", "Title", "Organization", "Deadline", "Status", "Country"]], use_container_width=True)
     
-    today = datetime.today().date()
-    df["DeadlineDate"] = pd.to_datetime(df["Deadline"]).dt.date
-    df["DaysLeft"] = (df["DeadlineDate"] - today).dt.days
-    
-    def get_status_badge(status):
-        if status == "Applied":
-            return "🟢 Applied"
-        elif status == "Not Applied":
-            return "🟡 Pending"
-        elif status == "Archived":
-            return "⚪ Archived"
-        return status
-    
-    def get_deadline_color(days_left):
-        if pd.isna(days_left):
-            return "⚪"
-        if days_left < 0:
-            return "🔴"
-        elif days_left <= 3:
-            return "🔴"
-        elif days_left <= 7:
-            return "🟡"
-        elif days_left <= 30:
-            return "🟢"
-        return "🔵"
-    
-    df["StatusBadge"] = df["Status"].apply(get_status_badge)
-    df["Urgency"] = df["DaysLeft"].apply(get_deadline_color)
-    
-    st.info(f"📌 Showing {len(df)} opportunities out of {len(st.session_state.df)} total")
-else:
-    st.info("ℹ️ No opportunities match your filters. Add your first opportunity below!")
-
-# ---------- METRICS ROW ----------
-if not df.empty:
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric("📌 Total", len(df))
-    with col2:
-        st.metric("✅ Applied", len(df[df["Status"] == "Applied"]))
-    with col3:
-        st.metric("⏳ Pending", len(df[df["Status"] == "Not Applied"]))
-    with col4:
-        urgent_count = len(df[df["DaysLeft"] <= 3])
-        st.metric("🔴 Urgent", urgent_count, delta="⚠️" if urgent_count > 0 else None)
-    with col5:
-        with st.container():
-            st.metric("📁 Archived", len(df[df["Status"] == "Archived"]))
-
-# ---------- TABLE VIEW ----------
-st.markdown("### 📋 All Opportunities")
-
-if not df.empty:
-    display_cols = ["Urgency", "Id", "Title", "Organization", "Deadline", "DaysLeft", "StatusBadge", "Category", "Country"]
-    display_df = df[display_cols].copy()
-    display_df = display_df.rename(columns={
-        "StatusBadge": "Status",
-        "DaysLeft": "Days Left"
-    })
-    
-    st.dataframe(
-        display_df,
-        use_container_width=True,
-        column_config={
-            "Urgency": st.column_config.TextColumn("⚠️"),
-            "Id": st.column_config.NumberColumn("ID"),
-            "Title": st.column_config.TextColumn("📌 Title"),
-            "Organization": st.column_config.TextColumn("🏢 Organization"),
-            "Deadline": st.column_config.DateColumn("📅 Deadline"),
-            "Days Left": st.column_config.NumberColumn("Days", format="%d"),
-            "Status": st.column_config.TextColumn("✅ Status"),
-            "Category": st.column_config.TextColumn("📂 Category"),
-            "Country": st.column_config.TextColumn("🌍 Country")
-        }
-    )
-    
-    # ---------- DETAIL VIEW ----------
-    st.markdown("### 📄 Opportunity Details")
-    
-    if not df.empty:
-        selected_id = st.selectbox(
-            "Select opportunity to view details:",
-            options=df["Id"].tolist(),
-            format_func=lambda x: f"{x} - {df[df['Id']==x]['Title'].iloc[0][:50]}"
-        )
-        
-        if selected_id:
-            row = df[df["Id"] == selected_id].iloc[0]
+    selected_id = st.selectbox("Select opportunity:", df["Id"].tolist())
+    if selected_id:
+        row = df[df["Id"] == selected_id].iloc[0]
+        with st.expander(f"📄 {row['Title']}", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Organization:** {row['Organization']}")
+                st.write(f"**Category:** {row['Category']}")
+                st.write(f"**Country:** {row['Country']}")
+                st.write(f"**Deadline:** {row['Deadline']}")
+            with col2:
+                st.write(f"**Status:** {row['Status']}")
+                if row['Link']:
+                    st.write(f"**Link:** [Click here]({row['Link']})")
+            st.write(f"**Description:**")
+            st.text_area("", row['Description'] if row['Description'] else "No description", height=100, key=f"desc_{selected_id}")
             
-            with st.expander(f"📄 {row['Title']} – {row['Organization']}", expanded=True):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**📍 Organization:** {row['Organization']}")
-                    st.write(f"**📂 Category:** {row['Category']}")
-                    st.write(f"**🌍 Country:** {row['Country']}")
-                    st.write(f"**📅 Deadline:** {row['Deadline']}")
-                    st.write(f"**⏰ Days Left:** {row['DaysLeft']} days")
-                with col2:
-                    st.write(f"**✅ Status:** {row['Status']}")
-                    st.write(f"**🔗 Link:** {row['Link'] if row['Link'] else 'Not provided'}")
-                    if row['Link']:
-                        st.write(f"**🌐 URL:** [{row['Link'][:30]}...]({row['Link']})")
-                
-                st.write(f"**📝 Description:**")
-                description = row['Description'] if row['Description'] else "No description provided"
-                st.text_area("", description, height=100, key=f"desc_{selected_id}")
-                
-                # Action buttons
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    if row["Status"] != "Applied":
-                        if st.button("✅ Mark Applied", key=f"apply_{selected_id}"):
-                            if update_opportunity(selected_id, {"Status": "Applied"}):
-                                st.success("✅ Marked as Applied!")
-                                st.rerun()
-                
-                with col2:
-                    if row["Status"] != "Archived":
-                        if st.button("📁 Archive", key=f"archive_{selected_id}"):
-                            if archive_opportunity(selected_id):
-                                st.success("📁 Archived successfully!")
-                                st.rerun()
-                
-                with col3:
-                    if row["Status"] == "Archived":
-                        if st.button("🔄 Restore", key=f"restore_{selected_id}"):
-                            if update_opportunity(selected_id, {"Status": "Not Applied"}):
-                                st.success("🔄 Restored successfully!")
-                                st.rerun()
-                
-                with col4:
-                    if st.button("🗑️ Delete Permanently", key=f"delete_{selected_id}"):
-                        if delete_opportunity_permanent(selected_id):
-                            st.success("🗑️ Deleted permanently!")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                if row["Status"] != "Applied":
+                    if st.button("✅ Mark Applied"):
+                        if update_opportunity(selected_id, {"Status": "Applied"}):
+                            st.success("Done!")
                             st.rerun()
+            with c2:
+                if st.button("🗑️ Delete"):
+                    if delete_opportunity(selected_id):
+                        st.success("Deleted!")
+                        st.rerun()
 
-else:
-    st.info("ℹ️ No opportunities available. Add your first opportunity using the form below.")
-
-# ---------- ADD NEW OPPORTUNITY ----------
 st.markdown("---")
 st.markdown("### ➕ Add New Opportunity")
 
-with st.form("add_form", clear_on_submit=True):
+with st.form("add_form"):
     col1, col2 = st.columns(2)
-    
     with col1:
-        title = st.text_input("📌 Title *", placeholder="e.g., MSc Water Resources Engineering")
-        organization = st.text_input("🏢 Organization *", placeholder="e.g., University of Oxford")
-        category = st.selectbox("📂 Category", ["Scholarship", "Job", "Fellowship", "Internship", "Other"])
-    
+        title = st.text_input("Title *")
+        organization = st.text_input("Organization *")
+        category = st.selectbox("Category", ["Scholarship", "Job", "Fellowship", "Internship"])
     with col2:
-        deadline = st.date_input("📅 Deadline", value=datetime.today().date() + timedelta(days=30))
-        country = st.selectbox("🌍 Country", COUNTRIES, index=COUNTRIES.index("Ethiopia"))
-        link = st.text_input("🔗 Link", placeholder="https://example.com/opportunity")
-    
-    description = st.text_area("📝 Description", height=100, placeholder="Paste or describe the opportunity...")
-    
-    col1, col2, col3 = st.columns([1, 1, 2])
-    with col1:
-        submitted = st.form_submit_button("➕ Add Opportunity", use_container_width=True)
-    
+        deadline = st.date_input("Deadline", value=datetime.today().date() + timedelta(days=30))
+        country = st.selectbox("Country", COUNTRIES[1:])
+        link = st.text_input("Link")
+    description = st.text_area("Description", height=100)
+    submitted = st.form_submit_button("➕ Add Opportunity")
     if submitted:
         if title and organization:
-            if add_opportunity({
-                "title": title,
-                "organization": organization,
-                "organization": organization,
-                "category": category,
-                "deadline": deadline.strftime("%Y-%m-%d"),
-                "country": country,
-                "link": link,
-                "description": description
-            }):
-                st.success("✅ Opportunity added successfully!")
+            if add_opportunity({"title": title, "organization": organization, "category": category, "deadline": deadline.strftime("%Y-%m-%d"), "country": country, "link": link, "description": description}):
+                st.success("✅ Added!")
                 st.rerun()
         else:
-            st.error("❌ Title and Organization are required!")
+            st.error("❌ Title and Organization required!")
 
-# ---------- FOOTER ----------
-st.markdown("---")
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.caption("📊 Data stored permanently on GitHub")
-with col2:
-    st.caption("🔄 Auto-saved to cloud")
-with col3:
-    st.caption(f"🔄 Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
