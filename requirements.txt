@@ -5,7 +5,7 @@ beautifulsoup4==4.12.2
 openpyxl==3.1.2
 altair==5.2.0
 transformers==4.35.2
-torch==2.1.0
+torch==2.3.0  # Updated from 2.1.0 to support Python 3.14
 sentencepiece==0.1.99
 selenium==4.15.2
 webdriver-manager==4.0.1
