@@ -1,6 +1,6 @@
 # ============================================================
 # ULTIMATE AI DASHBOARD – PERMANENT GITHUB STORAGE
-# SCHOLARSHIP & JOB TRACKER WITH LOCAL AI
+# SCHOLARSHIP & JOB TRACKER
 # ============================================================
 import streamlit as st
 import pandas as pd
@@ -182,241 +182,6 @@ def save_data_to_github(df, sha):
         st.error(f"❌ Error saving data: {str(e)}")
         return False, sha
 
-# ---------- LOCAL AI FUNCTIONS ----------
-try:
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-
-_model = None
-_tokenizer = None
-
-def load_ai_model():
-    global _model, _tokenizer
-    if _model is None and AI_AVAILABLE:
-        try:
-            with st.spinner("🧠 Loading AI model (first time may take 2-3 minutes)..."):
-                model_name = "microsoft/phi-2"
-                _tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-                _model = AutoModelForCausalLM.from_pretrained(
-                    model_name, 
-                    trust_remote_code=True,
-                    device_map="auto"
-                )
-            st.success("✅ AI model loaded successfully!")
-            return _model, _tokenizer
-        except Exception as e:
-            st.warning(f"⚠️ AI model not available: {str(e)}")
-            return None, None
-    return _model, _tokenizer
-
-def generate_text(prompt, max_length=300):
-    if not AI_AVAILABLE:
-        return None
-    
-    model, tokenizer = load_ai_model()
-    if model is None:
-        return None
-    
-    try:
-        inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
-        outputs = model.generate(
-            **inputs, 
-            max_new_tokens=max_length, 
-            do_sample=True, 
-            temperature=0.7,
-            pad_token_id=tokenizer.eos_token_id
-        )
-        generated = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
-        if generated.startswith(prompt):
-            generated = generated[len(prompt):].strip()
-        
-        words = generated.split()
-        if len(words) > 200:
-            generated = ' '.join(words[:200])
-        
-        return generated
-    except Exception as e:
-        st.warning(f"⚠️ AI generation error: {str(e)}")
-        return None
-
-def generate_cv(profile_data, description):
-    prompt = f"""Write a professional CV (plain text) for a Water Resources Engineer. Use this format:
-
-Contact: Name, Email, Phone, Location
-Education: Degree and details
-Experience: Relevant work experience
-Achievements: Key accomplishments
-Skills: Technical skills
-Certifications: Professional certifications
-
-Profile:
-Name: {profile_data.get('name', 'ZEDAGIM TESFAYE TANTU')}
-Email: {profile_data.get('email', 'zedagim100@gmail.com')}
-Phone: {profile_data.get('phone', '+251-924-700-390')}
-Location: {profile_data.get('location', 'Jigjiga, Ethiopia')}
-Education: {profile_data.get('education', 'Bachelor in Water Resource Engineering')}
-Experience: {profile_data.get('experience', 'Water resource engineering, irrigation systems')}
-Achievements: {profile_data.get('achievements', 'Developed Hydro-Agritech prototypes; Digitized FAO-56 Penman-Monteith')}
-Skills: {profile_data.get('skills', 'Python, GIS, Remote Sensing, Machine Learning')}
-
-CV:"""
-    
-    ai_result = generate_text(prompt, max_length=400)
-    if ai_result:
-        return ai_result
-    
-    return f"""================================================================================
-                               ZEDAGIM TESFAYE TANTU
-================================================================================
-
-CONTACT
----------
-Email: zedagim100@gmail.com
-Phone: +251-924-700-390
-Location: Jigjiga, Ethiopia
-
-EDUCATION
-----------
-Bachelor of Engineering in Water Resource & Irrigation Engineering
-GPA: 3.87/4.00
-
-EXPERIENCE
------------
-Water resource engineering
-Irrigation systems design and management
-Satellite data analysis for climate prediction
-Hydrological modeling and assessment
-
-ACHIEVEMENTS
--------------
-• Developed Hydro-Agritech prototypes for automated irrigation
-• Digitized FAO-56 Penman-Monteith for local conditions
-• Contributed to preventing 456+ trafficking cases through community work
-
-SKILLS
--------
-Python, GIS, Remote Sensing, Machine Learning
-Data Analysis, Project Management
-Hydraulic Modeling, Water Quality Assessment
-
-CERTIFICATIONS
----------------
-Certified in GeoAI
-Digital Irrigation Systems Specialist"""
-
-def generate_cover_letter(profile_data, description):
-    prompt = f"""Write a professional cover letter (3-4 paragraphs) for a job application. The applicant is an Ethiopian engineer.
-
-Profile:
-Name: {profile_data.get('name', 'ZEDAGIM TESFAYE TANTU')}
-Education: {profile_data.get('education', 'Bachelor in Water Resource Engineering')}
-Experience: {profile_data.get('experience', 'Water resource engineering')}
-Achievements: {profile_data.get('achievements', 'Developed prototypes, digitized models')}
-Skills: {profile_data.get('skills', 'Python, GIS, Remote Sensing')}
-
-Job Description: {description[:300] if description else 'Water Resources position'}
-
-Cover Letter:"""
-    
-    ai_result = generate_text(prompt, max_length=350)
-    if ai_result:
-        return ai_result
-    
-    return f"""Dear Hiring Committee,
-
-My name is {profile_data.get('name', 'ZEDAGIM TESFAYE TANTU')} and I am writing to express my strong interest in this opportunity. With a background in Water Resource and Irrigation Engineering, I have developed expertise in using technology to solve complex water challenges.
-
-Throughout my career, I have worked on projects that combine engineering principles with modern data analysis tools. My experience includes developing prototypes for automated irrigation systems and using satellite data for drought prediction - skills that directly align with your requirements.
-
-What sets me apart is my ability to work in challenging environments with limited resources. I have proven that I can deliver high-quality results even without extensive budgets or sophisticated equipment. This experience has made me adaptable, creative, and determined.
-
-I am confident that my skills and experiences make me a strong candidate for this position. Thank you for considering my application. I look forward to discussing how I can contribute to your team.
-
-Sincerely,
-{profile_data.get('name', 'ZEDAGIM TESFAYE TANTU')}"""
-
-def generate_motivation_letter(profile_data, description):
-    prompt = f"""Write a motivation letter (3-4 paragraphs) for a scholarship. The applicant is from Ethiopia.
-
-Profile:
-Name: {profile_data.get('name', 'ZEDAGIM TESFAYE TANTU')}
-Background: {profile_data.get('background', 'Water engineering and GeoAI')}
-Achievements: {profile_data.get('achievements', 'Developed prototypes, prevented trafficking')}
-Skills: {profile_data.get('skills', 'Python, GIS, Remote Sensing')}
-
-Program Description: {description[:300] if description else 'Scholarship program'}
-
-Motivation Letter:"""
-    
-    ai_result = generate_text(prompt, max_length=350)
-    if ai_result:
-        return ai_result
-    
-    return f"""Dear Selection Committee,
-
-My name is {profile_data.get('name', 'ZEDAGIM TESFAYE TANTU')} from Ethiopia. My journey in water resource engineering has been driven by a desire to solve real problems facing my community. As someone who has worked directly on irrigation challenges in the Horn of Africa, I understand the critical importance of water management.
-
-I have developed practical solutions, including prototypes for smart irrigation systems and models for drought prediction using satellite data. These projects taught me that real impact comes from combining technical skills with deep understanding of local needs. My work has already prevented water waste and improved agricultural outcomes.
-
-My experiences have also shown me the importance of international collaboration and knowledge sharing. I believe that bringing together diverse perspectives is essential for tackling global water challenges. This scholarship represents an opportunity to gain new skills and contribute to a global community of water professionals.
-
-I am committed to returning to Ethiopia after my studies and applying what I learn to benefit my community. Thank you for considering my application.
-
-Sincerely,
-{profile_data.get('name', 'ZEDAGIM TESFAYE TANTU')}"""
-
-# ---------- WEB SEARCH FUNCTIONS ----------
-def search_opportunities():
-    results = []
-    
-    search_sources = [
-        "https://www.scholars4dev.com/category/developing-countries/",
-        "https://www.mastersportal.com/search/ethiopia/",
-        "https://www.opportunitiesforafricans.com/category/scholarships/"
-    ]
-    
-    for url in search_sources:
-        try:
-            response = requests.get(url, timeout=10)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            for item in soup.find_all(['h2', 'h3', 'h4'])[:5]:
-                title = item.get_text().strip()
-                if len(title) > 10 and any(term in title.lower() for term in ['water', 'engineering', 'scholarship', 'fellowship', 'master', 'phd']):
-                    results.append({
-                        "title": title[:80],
-                        "source": url,
-                        "found_at": datetime.now().strftime("%Y-%m-%d %H:%M")
-                    })
-            time.sleep(1)
-        except:
-            continue
-    
-    return results
-
-def extract_description_from_url(url):
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        response = requests.get(url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        for script in soup(["script", "style"]):
-            script.decompose()
-        
-        text = soup.get_text(separator='\n')
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        full_text = '\n'.join(lines)
-        
-        if len(full_text) > 2000:
-            full_text = full_text[:2000] + "..."
-        
-        return full_text
-    except Exception as e:
-        return f"Error fetching content: {str(e)}"
-
 # ---------- COUNTRY LIST ----------
 COUNTRIES = [
     "All", "Afghanistan", "Albania", "Algeria", "Angola", "Argentina", "Armenia", "Australia", 
@@ -465,21 +230,6 @@ def init_session_state():
         st.session_state.last_search = datetime.now()
 
 init_session_state()
-
-# ---------- PROFILE DATA ----------
-def get_profile_data():
-    return {
-        "name": "ZEDAGIM TESFAYE TANTU",
-        "email": "zedagim100@gmail.com",
-        "phone": "+251-924-700-390",
-        "location": "Jigjiga, Ethiopia",
-        "education": "Bachelor of Engineering in Water Resource & Irrigation Engineering (GPA: 3.87/4.00)",
-        "experience": "Water resource engineering, irrigation systems, satellite data analysis, climate prediction",
-        "achievements": "Developed Hydro-Agritech prototypes; Digitized FAO-56 Penman-Monteith; Prevented 456+ trafficking cases",
-        "skills": "Python, GIS, Remote Sensing, Machine Learning, Data Analysis, Project Management",
-        "certifications": "Certified in GeoAI, Digital Irrigation Systems",
-        "background": "Water engineering and GeoAI for developing regions"
-    }
 
 # ---------- CRUD OPERATIONS ----------
 def add_opportunity(data):
@@ -615,26 +365,12 @@ with st.sidebar:
         else:
             st.info("No opportunities to check.")
     
-    if st.button("🌐 Find New Opportunities", use_container_width=True):
-        with st.spinner("Searching for opportunities..."):
-            results = search_opportunities()
-            st.session_state.search_results = results
-            if results:
-                st.success(f"✅ Found {len(results)} new opportunities!")
-                for r in results[:3]:
-                    st.write(f"- {r['title'][:60]}...")
-            else:
-                st.info("No new opportunities found.")
-    
     st.markdown("---")
-    st.caption("⚡ Data stored on GitHub • AI runs locally")
+    st.caption("⚡ Data stored on GitHub")
 
 # ---------- UI: MAIN PAGE ----------
-st.title("🎓 Scholarship & Job AI Dashboard")
-st.markdown("*Automated tracking, AI document generation, and permanent storage*")
-
-if "search_results" in st.session_state and st.session_state.search_results:
-    st.success(f"🔔 Found {len(st.session_state.search_results)} new opportunities from the web!")
+st.title("🎓 Scholarship & Job Dashboard")
+st.markdown("*Automated tracking and permanent storage*")
 
 # ---------- FILTERS SECTION ----------
 st.markdown("### 🔍 Filters & Search")
@@ -816,74 +552,10 @@ if not df.empty:
                 
                 with col4:
                     if st.button("🗑️ Delete Permanently", key=f"delete_{selected_id}"):
-                        if st.warning(f"⚠️ Are you sure you want to delete '{row['Title']}'? This cannot be undone!"):
-                            if delete_opportunity_permanent(selected_id):
-                                st.success("🗑️ Deleted permanently!")
-                                st.rerun()
-                
-                # AI Document Generation
-                st.markdown("---")
-                st.subheader("🤖 AI Document Generator")
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    if st.button("📄 Generate CV", key=f"cv_{selected_id}"):
-                        with st.spinner("Generating CV..."):
-                            profile = get_profile_data()
-                            cv = generate_cv(profile, description)
-                            if cv:
-                                st.session_state[f"cv_{selected_id}"] = cv
-                                st.success("✅ CV Generated!")
-                            else:
-                                st.warning("⚠️ AI not available. Using template.")
-                                cv = generate_cv(profile, description)
-                                st.session_state[f"cv_{selected_id}"] = cv
-                
-                with col2:
-                    if st.button("✉️ Generate Cover Letter", key=f"cl_{selected_id}"):
-                        with st.spinner("Generating Cover Letter..."):
-                            profile = get_profile_data()
-                            cl = generate_cover_letter(profile, description)
-                            if cl:
-                                st.session_state[f"cl_{selected_id}"] = cl
-                                st.success("✅ Cover Letter Generated!")
-                
-                with col3:
-                    if st.button("📨 Generate Motivation Letter", key=f"ml_{selected_id}"):
-                        with st.spinner("Generating Motivation Letter..."):
-                            profile = get_profile_data()
-                            ml = generate_motivation_letter(profile, description)
-                            if ml:
-                                st.session_state[f"ml_{selected_id}"] = ml
-                                st.success("✅ Motivation Letter Generated!")
-                
-                # Display generated documents
-                if f"cv_{selected_id}" in st.session_state:
-                    with st.expander("📄 View CV"):
-                        st.text_area("", st.session_state[f"cv_{selected_id}"], height=300)
-                        st.download_button(
-                            "⬇️ Download CV",
-                            st.session_state[f"cv_{selected_id}"],
-                            file_name=f"CV_{row['Title'][:30]}_{datetime.now().strftime('%Y%m%d')}.txt"
-                        )
-                
-                if f"cl_{selected_id}" in st.session_state:
-                    with st.expander("✉️ View Cover Letter"):
-                        st.text_area("", st.session_state[f"cl_{selected_id}"], height=300)
-                        st.download_button(
-                            "⬇️ Download Cover Letter",
-                            st.session_state[f"cl_{selected_id}"],
-                            file_name=f"CoverLetter_{row['Title'][:30]}_{datetime.now().strftime('%Y%m%d')}.txt"
-                        )
-                
-                if f"ml_{selected_id}" in st.session_state:
-                    with st.expander("📨 View Motivation Letter"):
-                        st.text_area("", st.session_state[f"ml_{selected_id}"], height=300)
-                        st.download_button(
-                            "⬇️ Download Motivation Letter",
-                            st.session_state[f"ml_{selected_id}"],
-                            file_name=f"Motivation_{row['Title'][:30]}_{datetime.now().strftime('%Y%m%d')}.txt"
-                        )
+                        if delete_opportunity_permanent(selected_id):
+                            st.success("🗑️ Deleted permanently!")
+                            st.rerun()
+
 else:
     st.info("ℹ️ No opportunities available. Add your first opportunity using the form below.")
 
@@ -915,6 +587,7 @@ with st.form("add_form", clear_on_submit=True):
             if add_opportunity({
                 "title": title,
                 "organization": organization,
+                "organization": organization,
                 "category": category,
                 "deadline": deadline.strftime("%Y-%m-%d"),
                 "country": country,
@@ -932,6 +605,6 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.caption("📊 Data stored permanently on GitHub")
 with col2:
-    st.caption("🤖 AI runs locally on your machine")
+    st.caption("🔄 Auto-saved to cloud")
 with col3:
     st.caption(f"🔄 Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
